@@ -1,7 +1,9 @@
 #include "../interface/SSBCorrections.h"
 #include "../TextReader/TextReader.hpp"
 #include "../CorrectionFiles/METXY/XYMETCorrection_withUL17andUL18andUL16.h"
-
+#include "../CorrectionFiles/Rochester/RoccoR.cc"
+#include <fstream>      
+#include <cstdlib>      
 #include "correction.h"
 #include "TRandom3.h"
 #include <cmath>
@@ -696,6 +698,54 @@ float SSBCorrections::GetMCBtagEfficiency(float pt, float eta, int flav, const s
 
     return std::clamp(eff, 0.0f, 1.0f);
 }
+
+double SSBCorrections::RochesterCorrectionData(TString year, int Q, double pt, double eta, double phi, int s,int m) const{
+
+    RoccoR rc;
+    std::string correctionFile;
+    if (year.Contains("2016Pre"))  correctionFile =  "./CorrectionFiles/Rochester/RoccoR2016aUL.txt";
+    if (year.Contains("2016Post")) correctionFile =  "./CorrectionFiles/Rochester/RoccoR2016bUL.txt";  
+    if (year.Contains("2017"))     correctionFile =  "./CorrectionFiles/Rochester/RoccoR2017UL.txt";
+    if (year.Contains("2018"))     correctionFile =  "./CorrectionFiles/Rochester/RoccoR2018UL.txt";
+
+    std::ifstream file(correctionFile);
+    if(!file.good()){
+	    std::cerr << "ERROR:  Rochester file is not found:" << correctionFile << std::endl; 
+    	    std::exit(1);
+    }    
+
+    rc.init(correctionFile);
+
+    double correction;
+    correction = rc.kScaleDT(Q,pt,eta,phi,s,m); return correction;
+}
+
+double SSBCorrections::RochesterCorrectionMC(TString year, int Q, double pt, double eta,double phi,int genID,double genPt,int nl, int s,int m) const{
+
+    RoccoR rc;
+    std::string correctionFile;
+    if (year.Contains("2016Pre"))  correctionFile = "./CorrectionFiles/Rochester/RoccoR2016aUL.txt";
+    if (year.Contains("2016Post")) correctionFile = "./CorrectionFiles/Rochester/RoccoR2016bUL.txt";  
+    if (year.Contains("2017"))     correctionFile = "./CorrectionFiles/Rochester/RoccoR2017UL.txt";
+    if (year.Contains("2018"))     correctionFile = "./CorrectionFiles/Rochester/RoccoR2018UL.txt";
+
+    std::ifstream file(correctionFile);
+    if(!file.good()){
+            std::cerr << "ERROR:  Rochester file is not found:" << correctionFile << std::endl;
+            std::exit(1);
+    }
+
+    rc.init(correctionFile);
+
+    double correction; double u;
+
+    bool genMatch = genID != -1;
+
+    if(genMatch) correction = rc.kSpreadMC(Q,pt,eta,phi,genPt,s,m);
+    else if(!genMatch){u = gRandom->Rndm(); correction = rc.kSmearMC(Q,pt,eta,phi,nl,u,s,m);} //Random number is needed when gen-mathcing is failed
+    return correction;
+}
+
 
 TLorentzVector SSBCorrections::METXYCorrection(const TLorentzVector& type1_met,
                                                int runnb, TString year, bool isMC, int npv, bool isUL, bool ispuppi

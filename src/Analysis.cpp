@@ -266,20 +266,28 @@ void Analysis::SetVariables() {
 
     // Select MET Type //
     METtype = SSBConfReader->GetText("METtype");// Error Print is false in this version, 
-    std::cout << "  MET type: " << METtype << std::endl;
     if (METtype == "DUMMY"){
 	    METtype = "PF"; 	// in case the MET type is not specified yet. This line wiil be removed
             std::cout << "[WARNING] METtype COULD NOT FIND CONFIGRUATION!! DEFALT IS PFMET!!  " << METtype << std::endl;
     }
+    std::cout << "  MET type: " << METtype << std::endl;
     ///
     //std::cout << "triggerList : " << triggerList.size()<< std::endl;
     //SetObjectVariable();
     applyMETXY = SSBConfReader->GetText("applyMETXY");
-    std::cout << "  apply MET XY correction: " << applyMETXY << std::endl;
     if (applyMETXY == "DUMMY") {
 	    applyMETXY == "False";
             std::cout << "[WARNING] applyMETXY COULD NOT FIND CONFIGRUATION!! DEFALT IS False!!  " << applyMETXY << std::endl;
     }
+    std::cout << "  apply MET XY correction: " << applyMETXY << std::endl;
+    
+    applyRochester = SSBConfReader->GetText("applyRochester");
+    if (applyRochester == "DUMMY") {
+            applyRochester == "False";
+            std::cout << "[WARNING] applyRochester COULD NOT FIND CONFIGRUATION!! DEFALT IS False!!  " << applyRochester << std::endl;
+    }
+    std::cout << "  apply Rochester correction: " << applyRochester << std::endl;
+
 }
 
 void Analysis::SetObjectVariable() {
@@ -1370,6 +1378,8 @@ void Analysis::LeptonOrder() {
     Lep.SetPxPyPzE(-999, -999, -999, -999);
     AnLep.SetPxPyPzE(-999, -999, -999, -999);
     // Helper function for assigning leptons and debugging
+    double RoccoR_Lep = 1; double RoccoR_AnLep = 1; 
+    int GenID1;int GenID2; double GenPt;
     auto assignLeptons = [&](const std::vector<TLorentzVector>& leptons,
                              const std::string& chargeKey,
                              const std::vector<int>& indices,
@@ -1383,14 +1393,63 @@ void Analysis::LeptonOrder() {
         Lep1 = leptons.at(indices[idx1]);
         Lep2 = leptons.at(indices[idx2]);
 
-        // Set Lep & AnLep //
-        if ((*intVectors[chargeKey])[indices[idx1]] < 0) {
-            Lep = leptons.at(indices[idx1]);
-            AnLep = leptons.at(indices[idx2]);
-        } else {
+
+	// Set Lep & AnLep //
+	if ((*intVectors[chargeKey])[indices[idx1]] < 0) {
+		Lep = leptons.at(indices[idx1]);
+		AnLep = leptons.at(indices[idx2]);
+		if(chargeKey == "Muon_charge"){
+			if(isData) {
+				RoccoR_Lep   = SSBCorr->RochesterCorrectionData(RunPeriod, -1, Lep.Pt(),Lep.Eta(),Lep.Phi(),0,0);   
+				RoccoR_AnLep = SSBCorr->RochesterCorrectionData(RunPeriod, 1, AnLep.Pt(),AnLep.Eta(),AnLep.Phi(),0,0);   
+			}
+			else if (!isData){
+				Muon_genId     = intVectors["Muon_genPartIdx"].get();
+				GenPts         = floatVectors["GenPart_pt"].get();
+				numberOfLayers = intVectors["Muon_nTrackerLayers"].get();
+				GenID1 = Muon_genId->At(idx1); GenID2 = Muon_genId->At(idx2); 
+				
+				RoccoR_Lep   = SSBCorr->RochesterCorrectionMC(RunPeriod,-1,Lep.Pt(),Lep.Eta(),Lep.Phi(),GenID1,GenPts->At(GenID1),numberOfLayers->At(idx1),0,0);
+				RoccoR_AnLep = SSBCorr->RochesterCorrectionMC(RunPeriod,1,AnLep.Pt(),AnLep.Eta(),AnLep.Phi(),GenID2,GenPts->At(GenID2),numberOfLayers->At(idx2),0,0);
+			}
+
+			if(applyRochester == "True"){
+				Lep.SetPtEtaPhiM(Lep.Pt()*RoccoR_Lep,Lep.Eta(),Lep.Phi(),Lep.M());
+				AnLep.SetPtEtaPhiM(AnLep.Pt()*RoccoR_AnLep,AnLep.Eta(),AnLep.Phi(),AnLep.M());
+				Lep1 = Lep;
+				Lep2 = AnLep;
+			}
+
+		}
+	}
+	else {
             Lep = leptons.at(indices[idx2]);
-            AnLep = leptons.at(indices[idx1]);
-        }
+	    AnLep = leptons.at(indices[idx1]);
+	    if(chargeKey == "Muon_charge"){
+		    if(isData) {
+			    RoccoR_Lep   = SSBCorr->RochesterCorrectionData(RunPeriod, -1, Lep.Pt(),Lep.Eta(),Lep.Phi(),0,0);   
+			    RoccoR_AnLep = SSBCorr->RochesterCorrectionData(RunPeriod, 1, AnLep.Pt(),AnLep.Eta(),AnLep.Phi(),0,0);   
+		    }
+		    else if (!isData){
+			    Muon_genId     = intVectors["Muon_genPartIdx"].get();
+			    GenPts         = floatVectors["GenPart_pt"].get();
+			    numberOfLayers = intVectors["Muon_nTrackerLayers"].get();
+			    GenID1 = Muon_genId->At(idx1); GenID2 = Muon_genId->At(idx2); 
+
+			    RoccoR_Lep   = SSBCorr->RochesterCorrectionMC(RunPeriod,-1,Lep.Pt(),Lep.Eta(),Lep.Phi(),GenID2,GenPts->At(GenID2),numberOfLayers->At(idx2),0,0);
+			    RoccoR_AnLep = SSBCorr->RochesterCorrectionMC(RunPeriod,1,AnLep.Pt(),AnLep.Eta(),AnLep.Phi(),GenID1,GenPts->At(GenID1),numberOfLayers->At(idx1),0,0);
+		    }
+		    if(applyRochester == "True"){
+			    Lep.SetPtEtaPhiM(Lep.Pt()*RoccoR_Lep,Lep.Eta(),Lep.Phi(),Lep.M());
+			    AnLep.SetPtEtaPhiM(AnLep.Pt()*RoccoR_AnLep,AnLep.Eta(),AnLep.Phi(),AnLep.M());
+			    Lep1 = AnLep;
+			    Lep2 = Lep;
+		    }
+
+	    }
+
+
+	}
 
     }; // end of assignLeptons //
 
@@ -1422,11 +1481,14 @@ void Analysis::LeptonOrder() {
     }
     else if (TString(Decaymode).Contains("muel")) {
     // Handle muon-electron decay mode
+        bool isMuLead;
         if (v_muon_idx.size() > 0 && v_electron_idx.size() > 0) {
             if (pre_muons.at(v_muon_idx.at(0)).Pt() > pre_elecs.at(v_electron_idx.at(0)).Pt()) {
-                Lep1 = pre_muons.at(v_muon_idx.at(0));
+                isMuLead = true;
+		Lep1 = pre_muons.at(v_muon_idx.at(0));
                 Lep2 = pre_elecs.at(v_electron_idx.at(0));
             } else {
+		isMuLead = false;
                 Lep1 = pre_elecs.at(v_electron_idx.at(0));
                 Lep2 = pre_muons.at(v_muon_idx.at(0));
             }
@@ -1434,10 +1496,42 @@ void Analysis::LeptonOrder() {
             if ((*intVectors["Muon_charge"])[v_muon_idx[0]] < 0) {
                 Lep = pre_muons.at(v_muon_idx.at(0));
                 AnLep = pre_elecs.at(v_electron_idx.at(0));
-            } else {
+		if(isData) RoccoR_Lep   = SSBCorr->RochesterCorrectionData(RunPeriod, -1, Lep.Pt(),Lep.Eta(),Lep.Phi(),0,0);
+		else if (!isData){
+			Muon_genId     = intVectors["Muon_genPartIdx"].get();
+			GenPts         = floatVectors["GenPart_pt"].get();
+			numberOfLayers = intVectors["Muon_nTrackerLayers"].get();
+			GenID1 = Muon_genId->At(v_muon_idx[0]);
+
+			RoccoR_Lep   = SSBCorr->RochesterCorrectionMC(RunPeriod,-1,Lep.Pt(),Lep.Eta(),Lep.Phi(),GenID1,GenPts->At(GenID1),numberOfLayers->At(v_muon_idx.at(0)),0,0);
+		}
+		if(applyRochester == "True"){
+			Lep.SetPtEtaPhiM(Lep.Pt()*RoccoR_Lep,Lep.Eta(),Lep.Phi(),Lep.M());
+			if(isMuLead) Lep1 = Lep;
+			else if (!isMuLead) Lep2 = Lep;
+		} 
+
+            } 
+	    else {
                 Lep = pre_elecs.at(v_electron_idx.at(0));
                 AnLep = pre_muons.at(v_muon_idx.at(0));
-            }
+                if(isData) RoccoR_Lep   = SSBCorr->RochesterCorrectionData(RunPeriod, -1, AnLep.Pt(),AnLep.Eta(),AnLep.Phi(),0,0);
+                else if (!isData){
+                        Muon_genId     = intVectors["Muon_genPartIdx"].get();
+                        GenPts         = floatVectors["GenPart_pt"].get();
+                        numberOfLayers = intVectors["Muon_nTrackerLayers"].get();
+                        GenID1 = Muon_genId->At(v_muon_idx[0]);
+
+                        RoccoR_AnLep   = SSBCorr->RochesterCorrectionMC(RunPeriod,1,AnLep.Pt(),AnLep.Eta(),AnLep.Phi(),GenID1,GenPts->At(GenID1),numberOfLayers->At(v_muon_idx.at(0)),0,0);
+                }
+                if(applyRochester == "True"){
+                        AnLep.SetPtEtaPhiM(AnLep.Pt()*RoccoR_AnLep,AnLep.Eta(),AnLep.Phi(),AnLep.M());
+                        if(isMuLead) Lep1 = AnLep;
+                        else if (!isMuLead) Lep2 = AnLep;
+                }
+            
+	    
+	    }
         } else {
          //   std::cerr << "Lepton TLorentzVector Error: v_muon_idx size = " 
          //             << v_muon_idx.size() << ", v_electron_idx size = " 

@@ -119,6 +119,10 @@ public:
                                 bool isData,
                                 int npv) const;
 
+    double RochesterCorrectionData(TString year, int Q, double pt, double eta, double phi, int s,int m) const;
+    double RochesterCorrectionMC(TString year, int Q, double pt, double eta,double phi,int genID,double genPt,int nl, int s,int m) const;
+
+
     //float GetPUJetIDSF(float pt, float eta, bool passPU, const std::string& wp, const std::string& syst) const;
 //    float GetPUJetIDSF(float pt, float eta, int passPU, const std::string& wp, const std::string& syst) const;
 //    float GetPUJetIDEff(float pt, float eta, const std::string& wp, const std::string& syst) const; 

@@ -1,5 +1,6 @@
 run, run, UInt_t, single
 Generator_weight, Generator, Float_t, single
+GenPart_pt, Generator, Float_t, vector
 HLT_IsoMu24, trigger, Bool_t, single
 HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL, trigger, Bool_t, single
 HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ, trigger, Bool_t, single
@@ -57,6 +58,8 @@ Muon_mvaId, muon, UChar_t, vector
 Muon_mvaLowPtId, muon, UChar_t, vector
 Muon_pfIsoId, muon, UChar_t, vector
 Muon_puppiIsoId, muon, UChar_t, vector
+Muon_genPartIdx, muon, Int_t, vector
+Muon_nTrackerLayers, muon, Int_t, vector
 nJet, jet, UInt_t, single
 Jet_pt, jet, Float_t, vector
 Jet_phi, jet, Float_t, vector
@@ -95,6 +98,7 @@ Electron_mvaFall17V2noIso_WP90, electron, Bool_t, vector
 Electron_pfRelIso03_all, electron, Float_t, vector
 Electron_mvaFall17V2Iso, electron, Float_t, vector
 nElectron, electron, UInt_t, single
+Electron_genPartIdx, electron, Int_t, vector
 MET_pt, met, Float_t, single
 MET_phi, met, Float_t, single
 PuppiMET_pt, met, Float_t, single

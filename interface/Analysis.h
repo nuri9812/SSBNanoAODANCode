@@ -71,6 +71,7 @@ private:
     TString XsecTable_;
     TString METtype;
     TString applyMETXY;
+    TString applyRochester;
 
     TString cutflowName[10];
 
@@ -269,6 +270,11 @@ private:
     // MET //
     TTreeReaderValue<Float_t>* met_pt;
     TTreeReaderValue<Float_t>* met_phi;
+
+    // Rochester Correction //
+    TTreeReaderArray<Int_t>* Muon_genId;
+    TTreeReaderArray<Float_t>* GenPts;
+    TTreeReaderArray<Int_t>* numberOfLayers;
 
     // Top Recontruction //
     TLorentzVector Top;
